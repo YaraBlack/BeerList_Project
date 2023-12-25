@@ -9,7 +9,7 @@ def show_dict():
         print("Your list is empty.\n")
     else:
         for i in beer_dict:
-            print( "Name:", i, "\n% of alchohol:", beer_dict[i]['alcho'],"\nIngredients:", beer_dict[i]['ingredients'], \
+            print( "Name:", i, "\n% of alcohol:", beer_dict[i]['alcho'],"\nIngredients:", beer_dict[i]['ingredients'], \
             "\nDescription:", beer_dict[i]['description'], "\n" )
             
 
@@ -18,7 +18,7 @@ def show_dict():
 def add_dict():
     name = input("Enter a name of beer: ")
     beer_dict[name] = {
-        'alcho' : input("Enter % of alchohol in beer: "),
+        'alco' : input("Enter % of alcohol in beer: "),
         'ingredients' : input("Enter the beer's ingredients: "),
         'description' : input("Describe a beer: ")
     }
@@ -58,10 +58,10 @@ def sort_dict():
     print("\n")
     if c == '1':
         for x, y in sorted(beer_dict.items()):
-            print("Beer:", x, "\n% of alchohol:", y['alcho'], "\nIngredients:", y['ingredients'], "\nDescription:", y['description'], "\n")
+            print("Beer:", x, "\n% of alcohol:", y['alcho'], "\nIngredients:", y['ingredients'], "\nDescription:", y['description'], "\n")
     elif c == '2':
         for x, y in sorted(beer_dict.items(), reverse = True):
-            print("Beer:", x, "\n% of alchohol:", y['alcho'], "\nIngredients:", y['ingredients'], "\nDescription:", y['description'], "\n")
+            print("Beer:", x, "\n% of alcohol:", y['alcho'], "\nIngredients:", y['ingredients'], "\nDescription:", y['description'], "\n")
     else:
         print("Wrong symbol!")
 
