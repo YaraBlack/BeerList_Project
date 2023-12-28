@@ -75,6 +75,13 @@ class MainWindow(QMainWindow):
         self.imagePath = ""        
         self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 3, Qt.AlignmentFlag.AlignHCenter)
     
+    def inputsReadOnly(self, val: bool):
+        self.input_beerName.setReadOnly(val)
+        self.input_beerAlco.setReadOnly(val)
+        self.input_beerIngr.setReadOnly(val)
+        self.input_beerTaste.setReadOnly(val)
+        self.button_addImage.setEnabled(not val)
+    
     def setImage(self, source, sourcePath = ""):
         if source == "button":
             path = openSingleFile(self, "img")
@@ -99,21 +106,18 @@ class MainWindow(QMainWindow):
         print(self.tempDict)
         
         self.clearEdit()
-
-        
         self.setTable()
         
-    def showEditArea(self):
-        self.edit_contentLayout.addWidget(self.inputAndInfo_contentFrame, 1, 0)
-        self.button_addNew.setParent(None)
-        self.controlPanel_contentLayout.addWidget(self.button_close, 0, 1)
+    def addNew(self):
+        self.clearEdit()
+        self.inputsReadOnly(False)
+        
 
-    def hideEditArea(self):
-        self.inputAndInfo_contentFrame.setParent(None)
-        self.edit_contentLayout.addWidget(self.placeholderFrame, 1, 0)
-        self.button_close.setParent(None)
-        self.controlPanel_contentLayout.addWidget(self.button_addNew, 0, 1)
-
+    def removeItem(self):
+        pass
+    
+    def editItem(self):
+        pass
 
     def getDataFromTable(self, item: QTableWidgetItem):
         if(item.data(0) in self.tempDict):
@@ -133,7 +137,8 @@ class MainWindow(QMainWindow):
             else:
                 self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 3, Qt.AlignmentFlag.AlignHCenter)
 
-            self.showEditArea()
+            if not self.input_beerName.isReadOnly():
+                self.inputsReadOnly(True)
         else:
             print("Wrong data! Either empty cell or not name cell!")
     
@@ -226,9 +231,6 @@ class MainWindow(QMainWindow):
         self.button_addNew = QPushButton("Add New", self.controlPanel_contentFrame)
         self.button_addNew.setFixedSize(70, 25)
         
-        self.button_close = QPushButton("Close", self.controlPanel_contentFrame)
-        self.button_close.setFixedSize(70, 25)
-        self.button_close.setParent(None)
         
         self.button_remove = QPushButton("Remove", self.controlPanel_contentFrame)
         self.button_remove.setFixedSize(70, 25)
@@ -246,15 +248,10 @@ class MainWindow(QMainWindow):
         self.controlPanel_contentLayout.addWidget(self.button_editContent, 0, 5)
         self.controlPanel_contentLayout.setColumnMinimumWidth(6, 70)
         
-        # Input and info section
-        # Placeholder Frame instead of Input and info section Frame
-        self.placeholderFrame = QFrame()
-        self.placeholderFrame.setFixedSize(300, 520)
-        
+        # Input and info section        
         # Input and info section Frame
         self.inputAndInfo_contentFrame = QFrame(self.edit_contentFrame)
         self.inputAndInfo_contentFrame.setFixedSize(300, 520)
-        self.inputAndInfo_contentFrame.setParent(None)
         self.inputAndInfo_contentFrame.setStyleSheet("QFrame {background-color: orange; }")
         
         # # Input and info section Layout
@@ -324,7 +321,7 @@ class MainWindow(QMainWindow):
 
         
         self.edit_contentLayout.addWidget(self.controlPanel_contentFrame, 0, 0)
-        self.edit_contentLayout.addWidget(self.placeholderFrame, 1, 0)
+        self.edit_contentLayout.addWidget(self.inputAndInfo_contentFrame, 1, 0)
         
         
         
@@ -361,8 +358,7 @@ class MainWindow(QMainWindow):
         # Connect all Signals to Slots
         self.button_open.clicked.connect(self.openDB)
         self.button_save.clicked.connect(self.saveFile)
-        self.button_addNew.clicked.connect(self.showEditArea)
-        self.button_close.clicked.connect(self.hideEditArea)
+        self.button_addNew.clicked.connect(self.addNew)
         self.button_addImage.clicked.connect(partial(self.setImage, "button"))
         self.button_confirmForm.clicked.connect(self.addItemToTable)
         
