@@ -1,11 +1,11 @@
 import sys
 import os
 from functools import partial
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QRegularExpression
 from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton,\
     QGridLayout, QWidget, QFrame, QLineEdit, QDialog, QPlainTextEdit,\
     QTableWidget, QTableWidgetItem, QHeaderView
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap, QRegularExpressionValidator
 from filesHandler import *
 
 
@@ -18,9 +18,7 @@ class RegistrationForm(QDialog):
         self.setWindowTitle("Registration")
         self.setFixedSize(300, 300)
 
-    
-    
-    
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -46,12 +44,14 @@ class MainWindow(QMainWindow):
         for i, (name, nameAttr) in enumerate(self.tempDict.items()):
             item_name = QTableWidgetItem(name)
             item_alco = QTableWidgetItem(nameAttr['alco'])
+            item_grade = QTableWidgetItem(nameAttr['grade'])
             item_ingr = QTableWidgetItem(nameAttr['ingr'])
             item_descr = QTableWidgetItem(nameAttr['descr'])
             self.table.setItem(i, 0, item_name)
             self.table.setItem(i, 1, item_alco)
-            self.table.setItem(i, 2, item_ingr)
-            self.table.setItem(i, 3, item_descr)
+            self.table.setItem(i, 2, item_grade)
+            self.table.setItem(i, 3, item_ingr)
+            self.table.setItem(i, 4, item_descr)
     
     def openDB(self):
         path = openSingleFile(self, "db")
@@ -59,9 +59,11 @@ class MainWindow(QMainWindow):
             try:
                 jsonRead(path, self.tempDict)        
                 self.setTable()
-                self.clearEdit()
+                self.addNew()
             except TypeError as e:
-                print("Error! Wrong JSON structure!\n", e)
+                print("Error! Wrong JSON data type!\n", e)
+            except KeyError as e:
+                print("Error! Wrong JSON structure!\n", e, "is absent.")
         else:
             print("Operation has been canceled!")
     
@@ -75,14 +77,16 @@ class MainWindow(QMainWindow):
     def clearEdit(self):
         self.input_beerName.setText("")
         self.input_beerAlco.setText("")
+        self.input_beerPoints.setText("")
         self.input_beerIngr.setPlainText("")
         self.input_beerTaste.setPlainText("")
         self.imagePath = ""        
-        self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 3, Qt.AlignmentFlag.AlignHCenter)
+        self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 5, Qt.AlignmentFlag.AlignHCenter)
     
     def changeReadOnly(self, val: bool, editBtnPressed = False):
         self.input_beerName.setReadOnly(val)
         self.input_beerAlco.setReadOnly(val)
+        self.input_beerPoints.setReadOnly(val)
         self.input_beerIngr.setReadOnly(val)
         self.input_beerTaste.setReadOnly(val)
         self.button_addImage.setEnabled(not val)
@@ -103,7 +107,7 @@ class MainWindow(QMainWindow):
             self.imagePath = path
             self.label_image.setPixmap(QPixmap(path).scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio))
             self.img_placeholder.setParent(None)
-            self.addForm_layout.addWidget(self.label_image, 0, 0, 1, 3, Qt.AlignmentFlag.AlignHCenter)
+            self.addForm_layout.addWidget(self.label_image, 0, 0, 1, 5, Qt.AlignmentFlag.AlignHCenter)
         else:
             print("Operation has been canceled!")
         
@@ -112,6 +116,7 @@ class MainWindow(QMainWindow):
         if state == "new":
             self.tempDict[self.input_beerName.text()] = {
                 'alco': self.input_beerAlco.text(),
+                'grade': self.input_beerPoints.text(),
                 'ingr': self.input_beerIngr.toPlainText(),
                 'descr': self.input_beerTaste.toPlainText(),
                 'imgPath': self.imagePath}
@@ -120,6 +125,7 @@ class MainWindow(QMainWindow):
         
             editedItem[self.input_beerName.text()] = {
                 'alco': self.input_beerAlco.text(),
+                'grade': self.input_beerPoints.text(),
                 'ingr': self.input_beerIngr.toPlainText(),
                 'descr': self.input_beerTaste.toPlainText(),
                 'imgPath': self.imagePath}
@@ -172,18 +178,20 @@ class MainWindow(QMainWindow):
             print(f"{item.data(0)} has values {self.tempDict[item.data(0)]}")
             self.input_beerName.setText(f"{item.data(0)}")
             self.input_beerAlco.setText(f"{self.tempDict[item.data(0)]['alco']}")
+            self.input_beerPoints.setText(f"{self.tempDict[item.data(0)]['grade']}")
             self.input_beerIngr.setPlainText(f"{self.tempDict[item.data(0)]['ingr']}")
             self.input_beerTaste.setPlainText(f"{self.tempDict[item.data(0)]['descr']}")
             if self.tempDict[item.data(0)]['imgPath']:
-                print(self.tempDict[item.data(0)]['imgPath'])
                 self.setImage("func", self.tempDict[item.data(0)]['imgPath'])                
             else:
-                self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 3, Qt.AlignmentFlag.AlignHCenter)
-
+                self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 5, Qt.AlignmentFlag.AlignHCenter)
+            
+            
             if not self.input_beerName.isReadOnly():
                 self.changeReadOnly(True)
         else:
             print("Wrong data! Either empty cell or not name cell!")
+    
     
     def createContent(self):
             
@@ -321,6 +329,8 @@ class MainWindow(QMainWindow):
         
         self.label_beerAlco = QLabel("Alcohol in %:")
         
+        self.label_beerPoints = QLabel("Points:")
+        
         self.label_beerIngr = QLabel("Ingredients:")
         
         self.label_beerTaste = QLabel("Taste description:")
@@ -329,7 +339,10 @@ class MainWindow(QMainWindow):
         self.input_beerName.setFixedSize(170, 25)
         
         self.input_beerAlco = QLineEdit(self.addForm)
-        self.input_beerAlco.setFixedSize(170, 25)
+        self.input_beerAlco.setFixedSize(40, 25)
+        
+        self.input_beerPoints = QLineEdit(self.addForm)
+        self.input_beerPoints.setFixedSize(40, 25)
         
         self.input_beerIngr = QPlainTextEdit(self.addForm)
         self.input_beerIngr.setFixedSize(170, 80)
@@ -345,19 +358,25 @@ class MainWindow(QMainWindow):
         self.img_placeholder.setFixedSize(200, 200)
         self.img_placeholder.setStyleSheet("border: 1px solid black")
         
+        # Add validation to points input
+        rx = QRegularExpression(r'^\d{0,3}$')
+        pointsRegEx = QRegularExpressionValidator(rx)
+        self.input_beerPoints.setValidator(pointsRegEx)
         
-        
-        self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 3, Qt.AlignmentFlag.AlignHCenter)
-        self.addForm_layout.addWidget(self.button_addImage, 1, 0, 1, 3, Qt.AlignmentFlag.AlignHCenter)
+        self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 5, Qt.AlignmentFlag.AlignHCenter)
+        self.addForm_layout.addWidget(self.button_addImage, 1, 0, 1, 5, Qt.AlignmentFlag.AlignHCenter)
         self.addForm_layout.addWidget(self.label_beerName, 2, 0)
-        self.addForm_layout.addWidget(self.input_beerName, 2, 1, 1, 2)
+        self.addForm_layout.addWidget(self.input_beerName, 2, 1, 1, 4)
         self.addForm_layout.addWidget(self.label_beerAlco, 3, 0)
-        self.addForm_layout.addWidget(self.input_beerAlco, 3, 1, 1, 2)
+        self.addForm_layout.addWidget(self.input_beerAlco, 3, 1)
+        self.addForm_layout.addWidget(self.label_beerPoints, 3, 3)
+        self.addForm_layout.addWidget(self.input_beerPoints, 3, 4)
+        self.addForm_layout.setColumnMinimumWidth(5, 10)
         self.addForm_layout.addWidget(self.label_beerIngr, 4, 0)
-        self.addForm_layout.addWidget(self.input_beerIngr, 4, 1, 1, 2)
+        self.addForm_layout.addWidget(self.input_beerIngr, 4, 1, 1, 4)
         self.addForm_layout.addWidget(self.label_beerTaste, 5, 0)
-        self.addForm_layout.addWidget(self.input_beerTaste, 5, 1, 1, 2)
-        self.addForm_layout.addWidget(self.button_confirmForm, 6, 0, 1, 3, Qt.AlignmentFlag.AlignHCenter)
+        self.addForm_layout.addWidget(self.input_beerTaste, 5, 1, 1, 4)
+        self.addForm_layout.addWidget(self.button_confirmForm, 6, 0, 1, 5, Qt.AlignmentFlag.AlignHCenter)
         
         inputAndInfo_contentLayout.addWidget(self.addForm, 0, 0)
         
@@ -380,18 +399,20 @@ class MainWindow(QMainWindow):
         listOutput_contentLayout = self.gridTemplate(listOutput_contentFrame)
         listOutput_contentFrame.setLayout(listOutput_contentLayout)
         
-        
         self.table = QTableWidget(listOutput_contentFrame)
 
         self.table.setRowCount(1)
-        self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(["Name", "Alc %", "Ingridients", "Description"])
+        self.table.setColumnCount(5)
+        self.table.setHorizontalHeaderLabels(["Name", "Alc %", "Rating","Ingridients", "Description"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
+        self.table.setSortingEnabled(True)
+        self.table.setModel()
         self.table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.table.setCornerButtonEnabled(False)
         self.table.setColumnWidth(0, 120)
         self.table.setColumnWidth(1, 46)
-        self.table.setColumnWidth(2, 150)
+        self.table.setColumnWidth(2, 50)
+        self.table.setColumnWidth(3, 100)
         self.table.setColumnWidth(3, 150)
         
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
