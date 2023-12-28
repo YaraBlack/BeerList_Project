@@ -87,7 +87,7 @@ while True:
         case "5":
             json_reading(beer_dict)
         case "6":
-            sort_dict
+            sort_dict()
         case "7":
             break
         case _:
