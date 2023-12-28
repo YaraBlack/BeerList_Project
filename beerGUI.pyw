@@ -8,11 +8,7 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton,\
 from PyQt6.QtGui import QPixmap
 from filesHandler import *
 
-def gridTemplate(parent):
-    layout = QGridLayout(parent)
-    layout.setContentsMargins(0, 0, 0, 0)
-    layout.setSpacing(0)
-    return layout
+
 
 
 class RegistrationForm(QDialog):
@@ -38,6 +34,11 @@ class MainWindow(QMainWindow):
         self.createContent()
         self.show()
         
+    def gridTemplate(self, parent):
+        layout = QGridLayout(parent)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        return layout
         
     def setTable(self):
         self.table.setRowCount(len(self.tempDict))
@@ -55,9 +56,12 @@ class MainWindow(QMainWindow):
     def openDB(self):
         path = openSingleFile(self, "db")
         if path:
-            jsonRead(path, self.tempDict)        
-            self.setTable()
-            self.clearEdit()
+            try:
+                jsonRead(path, self.tempDict)        
+                self.setTable()
+                self.clearEdit()
+            except TypeError as e:
+                print("Error! Wrong JSON structure!\n", e)
         else:
             print("Operation has been canceled!")
     
@@ -76,20 +80,24 @@ class MainWindow(QMainWindow):
         self.imagePath = ""        
         self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 3, Qt.AlignmentFlag.AlignHCenter)
     
-    def changeReadOnly(self, val: bool):
+    def changeReadOnly(self, val: bool, editBtnPressed = False):
         self.input_beerName.setReadOnly(val)
         self.input_beerAlco.setReadOnly(val)
         self.input_beerIngr.setReadOnly(val)
         self.input_beerTaste.setReadOnly(val)
         self.button_addImage.setEnabled(not val)
-        self.button_remove.setEnabled(val)
-        self.button_editContent.setEnabled(val)
+        if not editBtnPressed:
+            self.button_remove.setEnabled(val)
+            self.button_editContent.setEnabled(val)
+            
     
     def setImage(self, source, sourcePath = ""):
         if source == "button":
             path = openSingleFile(self, "img")
         elif source == "func":
             path = sourcePath
+        else:
+            print("Wrong function call!")
             
         if path:
             self.imagePath = path
@@ -99,14 +107,28 @@ class MainWindow(QMainWindow):
         else:
             print("Operation has been canceled!")
         
-    def addItemToTable(self):
+    def addItemToTable(self, state: str):
         
-        self.tempDict[self.input_beerName.text()] = {
-            'alco': self.input_beerAlco.text(),
-            'ingr': self.input_beerIngr.toPlainText(),
-            'descr': self.input_beerTaste.toPlainText(),
-            'imgPath': self.imagePath}
-        print(self.tempDict)
+        if state == "new":
+            self.tempDict[self.input_beerName.text()] = {
+                'alco': self.input_beerAlco.text(),
+                'ingr': self.input_beerIngr.toPlainText(),
+                'descr': self.input_beerTaste.toPlainText(),
+                'imgPath': self.imagePath}
+        elif state == "edit":
+            editedItem = {}
+        
+            editedItem[self.input_beerName.text()] = {
+                'alco': self.input_beerAlco.text(),
+                'ingr': self.input_beerIngr.toPlainText(),
+                'descr': self.input_beerTaste.toPlainText(),
+                'imgPath': self.imagePath}
+        
+            self.tempDict = dict(list(self.tempDict.items())[:self.activeRow] +
+                                list(editedItem.items()) +
+                                list(self.tempDict.items())[self.activeRow + 1:])
+            
+            print("Edited successfully!")
         
         self.clearEdit()
         self.setTable()
@@ -114,6 +136,9 @@ class MainWindow(QMainWindow):
     def addNew(self):
         self.clearEdit()
         self.changeReadOnly(False)
+        self.button_confirmForm.clicked.disconnect()
+        self.button_confirmForm.clicked.connect(partial(self.addItemToTable,
+                                                        "new"))
         
 
     def removeItem(self):
@@ -122,16 +147,22 @@ class MainWindow(QMainWindow):
             if key == self.input_beerName.text():
                 self.table.removeRow(index)
                 delKey = key
-        
+        if self.table.rowCount() == 0:
+            self.table.setRowCount(1)
         self.addNew()
         print(f"The item {self.tempDict.pop(delKey)} has been deleted!")
-        
-        # del self.tempDict[self.input_beerName.text()]
+
     
     def editItem(self):
-        pass
+        self.changeReadOnly(False, True)
+        
+        self.button_confirmForm.clicked.disconnect()
+        self.button_confirmForm.clicked.connect(partial(self.addItemToTable,
+                                                        "edit"))
+        
 
     def getDataFromTable(self, item: QTableWidgetItem):
+        self.activeRow = item.row()
         if(item.data(0) in self.tempDict):
             
             for key, value in self.tempDict.items():
@@ -161,7 +192,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.main_contentFrame)
         
         # Create Main Layout
-        self.main_contentLayout = gridTemplate(self.main_contentFrame)
+        self.main_contentLayout = self.gridTemplate(self.main_contentFrame)
         self.main_contentFrame.setLayout(self.main_contentLayout)
         self.main_contentFrame.setStyleSheet('QFrame {background-color: #F9D7AF; }')
         
@@ -176,7 +207,7 @@ class MainWindow(QMainWindow):
             background-color: #DCAE77;}')
         
         # Create User section Layout
-        self.user_contentLayout = gridTemplate(self.user_contentFrame)
+        self.user_contentLayout = self.gridTemplate(self.user_contentFrame)
         self.user_contentFrame.setLayout(self.user_contentLayout)
         self.user_contentLayout.setSpacing(10)
 
@@ -226,7 +257,7 @@ class MainWindow(QMainWindow):
         self.edit_contentFrame.setStyleSheet('QFrame { border-right: 1px solid black; }')
         
         # Edit section layout
-        self.edit_contentLayout = gridTemplate(self.edit_contentFrame)
+        self.edit_contentLayout = self.gridTemplate(self.edit_contentFrame)
         self.edit_contentFrame.setLayout(self.edit_contentLayout)
         
         #Control panel section
@@ -236,7 +267,7 @@ class MainWindow(QMainWindow):
         self.controlPanel_contentFrame.setStyleSheet('QFrame { border-bottom: 1px solid black; }')
         
         # Control panel section Layout
-        self.controlPanel_contentLayout = gridTemplate(self.controlPanel_contentFrame)
+        self.controlPanel_contentLayout = self.gridTemplate(self.controlPanel_contentFrame)
         self.controlPanel_contentFrame.setLayout(self.controlPanel_contentLayout)
         
         # Add buttons to the control panel
@@ -267,12 +298,12 @@ class MainWindow(QMainWindow):
         self.inputAndInfo_contentFrame.setStyleSheet("QFrame {background-color: orange; }")
         
         # # Input and info section Layout
-        inputAndInfo_contentLayout = gridTemplate(self.inputAndInfo_contentFrame)
+        inputAndInfo_contentLayout = self.gridTemplate(self.inputAndInfo_contentFrame)
         self.inputAndInfo_contentFrame.setLayout(inputAndInfo_contentLayout)
         
         self.addForm = QWidget(self.inputAndInfo_contentFrame)
         self.addForm.setFixedSize(300, 520)
-        self.addForm_layout = gridTemplate(self.addForm)
+        self.addForm_layout = self.gridTemplate(self.addForm)
         self.addForm.setLayout(self.addForm_layout)
         self.addForm.setStyleSheet(" QLabel {border: 0px}")
         self.addForm_layout.setContentsMargins(10, 10, 10, 10)
@@ -346,7 +377,7 @@ class MainWindow(QMainWindow):
         # List output section Frame
         listOutput_contentFrame = QFrame(self.main_contentFrame)
         listOutput_contentFrame.setFixedSize(500, 560)
-        listOutput_contentLayout = gridTemplate(listOutput_contentFrame)
+        listOutput_contentLayout = self.gridTemplate(listOutput_contentFrame)
         listOutput_contentFrame.setLayout(listOutput_contentLayout)
         
         
@@ -372,8 +403,9 @@ class MainWindow(QMainWindow):
         self.button_save.clicked.connect(self.saveFile)
         self.button_addNew.clicked.connect(self.addNew)
         self.button_remove.clicked.connect(self.removeItem)
+        self.button_editContent.clicked.connect(self.editItem)
         self.button_addImage.clicked.connect(partial(self.setImage, "button"))
-        self.button_confirmForm.clicked.connect(self.addItemToTable)
+        self.button_confirmForm.clicked.connect(partial(self.addItemToTable, "new"))
         
         self.table.itemClicked.connect(self.getDataFromTable)
 
