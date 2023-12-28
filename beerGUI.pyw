@@ -34,6 +34,7 @@ class MainWindow(QMainWindow):
         
         self.tempDict = {}
         self.imagePath = ""
+        self.activeRow = 0
         self.createContent()
         self.show()
         
@@ -75,12 +76,14 @@ class MainWindow(QMainWindow):
         self.imagePath = ""        
         self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 3, Qt.AlignmentFlag.AlignHCenter)
     
-    def inputsReadOnly(self, val: bool):
+    def changeReadOnly(self, val: bool):
         self.input_beerName.setReadOnly(val)
         self.input_beerAlco.setReadOnly(val)
         self.input_beerIngr.setReadOnly(val)
         self.input_beerTaste.setReadOnly(val)
         self.button_addImage.setEnabled(not val)
+        self.button_remove.setEnabled(val)
+        self.button_editContent.setEnabled(val)
     
     def setImage(self, source, sourcePath = ""):
         if source == "button":
@@ -110,11 +113,20 @@ class MainWindow(QMainWindow):
         
     def addNew(self):
         self.clearEdit()
-        self.inputsReadOnly(False)
+        self.changeReadOnly(False)
         
 
     def removeItem(self):
-        pass
+        delKey = ""
+        for index, key in enumerate(self.tempDict):
+            if key == self.input_beerName.text():
+                self.table.removeRow(index)
+                delKey = key
+        
+        self.addNew()
+        print(f"The item {self.tempDict.pop(delKey)} has been deleted!")
+        
+        # del self.tempDict[self.input_beerName.text()]
     
     def editItem(self):
         pass
@@ -138,7 +150,7 @@ class MainWindow(QMainWindow):
                 self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 3, Qt.AlignmentFlag.AlignHCenter)
 
             if not self.input_beerName.isReadOnly():
-                self.inputsReadOnly(True)
+                self.changeReadOnly(True)
         else:
             print("Wrong data! Either empty cell or not name cell!")
     
@@ -359,6 +371,7 @@ class MainWindow(QMainWindow):
         self.button_open.clicked.connect(self.openDB)
         self.button_save.clicked.connect(self.saveFile)
         self.button_addNew.clicked.connect(self.addNew)
+        self.button_remove.clicked.connect(self.removeItem)
         self.button_addImage.clicked.connect(partial(self.setImage, "button"))
         self.button_confirmForm.clicked.connect(self.addItemToTable)
         
