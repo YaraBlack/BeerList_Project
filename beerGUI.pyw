@@ -5,7 +5,7 @@ from PyQt6.QtCore import Qt, QRegularExpression
 from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton,\
     QGridLayout, QWidget, QFrame, QLineEdit, QDialog, QPlainTextEdit,\
     QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox
-from PyQt6.QtGui import QPixmap, QRegularExpressionValidator,QIcon
+from PyQt6.QtGui import QPixmap, QRegularExpressionValidator, QIcon
 from filesHandler import *
 
 
@@ -30,6 +30,13 @@ class MessageBox(QMessageBox):
         self.setText("The 'name' input field is empty!")
         
         self.exec()
+
+class NumericTableWidgetItem(QTableWidgetItem):
+    def __lt__(self, other):
+        try:
+            return float(self.text()) < float(other.text())
+        except ValueError:
+            return super().__lt__(other)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -57,8 +64,8 @@ class MainWindow(QMainWindow):
         
         for i, (name, nameAttr) in enumerate(self.tempDict.items()):
             item_name = QTableWidgetItem(name)
-            item_alco = QTableWidgetItem(nameAttr['alco'])
-            item_grade = QTableWidgetItem(nameAttr['grade'])
+            item_alco = NumericTableWidgetItem(nameAttr['alco'])
+            item_grade = NumericTableWidgetItem(nameAttr['grade'])
             item_ingr = QTableWidgetItem(nameAttr['ingr'])
             item_descr = QTableWidgetItem(nameAttr['descr'])
             self.table.setItem(i, 0, item_name)
@@ -95,7 +102,8 @@ class MainWindow(QMainWindow):
         self.input_beerIngr.setPlainText("")
         self.input_beerTaste.setPlainText("")
         self.imagePath = ""        
-        self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 5, Qt.AlignmentFlag.AlignHCenter)
+        self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 5,
+                                      Qt.AlignmentFlag.AlignHCenter)
     
     def changeReadOnly(self, val: bool, editBtnPressed = False):
         self.input_beerName.setReadOnly(val)
@@ -119,9 +127,11 @@ class MainWindow(QMainWindow):
             
         if path:
             self.imagePath = path
-            self.label_image.setPixmap(QPixmap(path).scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio))
+            self.label_image.setPixmap(QPixmap(path).scaled(200, 200,
+                                        Qt.AspectRatioMode.KeepAspectRatio))
             self.img_placeholder.setParent(None)
-            self.addForm_layout.addWidget(self.label_image, 0, 0, 1, 5, Qt.AlignmentFlag.AlignHCenter)
+            self.addForm_layout.addWidget(self.label_image, 0, 0, 1, 5,
+                                        Qt.AlignmentFlag.AlignHCenter)
         else:
             print("Operation has been canceled!")
         
@@ -203,7 +213,8 @@ class MainWindow(QMainWindow):
             if self.tempDict[item.data(0)]['imgPath']:
                 self.setImage("func", self.tempDict[item.data(0)]['imgPath'])                
             else:
-                self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 5, Qt.AlignmentFlag.AlignHCenter)
+                self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 5,
+                                              Qt.AlignmentFlag.AlignHCenter)
             
             
             if not self.input_beerName.isReadOnly():
@@ -221,7 +232,8 @@ class MainWindow(QMainWindow):
         # Create Main Layout
         self.main_contentLayout = self.gridTemplate(self.main_contentFrame)
         self.main_contentFrame.setLayout(self.main_contentLayout)
-        self.main_contentFrame.setStyleSheet('QFrame {background-color: #F9D7AF; }')
+        self.main_contentFrame.setStyleSheet('QFrame \
+                                {background-color: #F9D7AF; }')
         
 ###############################################################################
         
@@ -230,8 +242,8 @@ class MainWindow(QMainWindow):
         self.user_contentFrame = QFrame(self.main_contentFrame)
         self.user_contentFrame.setFixedSize(800, 40)
         
-        self.user_contentFrame.setStyleSheet('QFrame { border-bottom: 1px solid black;\
-            background-color: #DCAE77;}')
+        self.user_contentFrame.setStyleSheet('QFrame \
+            { border-bottom: 1px solid black; background-color: #DCAE77;}')
         
         # Create User section Layout
         self.user_contentLayout = self.gridTemplate(self.user_contentFrame)
@@ -281,7 +293,8 @@ class MainWindow(QMainWindow):
         # Edit section Frame
         self.edit_contentFrame = QFrame(self.main_contentFrame)
         self.edit_contentFrame.setFixedSize(300, 560)
-        self.edit_contentFrame.setStyleSheet('QFrame { border-right: 1px solid black; }')
+        self.edit_contentFrame.setStyleSheet('QFrame \
+                                { border-right: 1px solid black; }')
         
         # Edit section layout
         self.edit_contentLayout = self.gridTemplate(self.edit_contentFrame)
@@ -291,22 +304,26 @@ class MainWindow(QMainWindow):
         # Control panel section Frame
         self.controlPanel_contentFrame = QFrame(self.edit_contentFrame)
         self.controlPanel_contentFrame.setFixedSize(300, 40)
-        self.controlPanel_contentFrame.setStyleSheet('QFrame { border-bottom: 1px solid black; }')
+        self.controlPanel_contentFrame.setStyleSheet('QFrame \
+                                        { border-bottom: 1px solid black; }')
         
         # Control panel section Layout
         self.controlPanel_contentLayout = self.gridTemplate(self.controlPanel_contentFrame)
         self.controlPanel_contentFrame.setLayout(self.controlPanel_contentLayout)
         
         # Add buttons to the control panel
-        self.button_addNew = QPushButton("Add New", self.controlPanel_contentFrame)
+        self.button_addNew = QPushButton("Add New",
+                                         self.controlPanel_contentFrame)
         self.button_addNew.setFixedSize(70, 25)
         
         
-        self.button_remove = QPushButton("Remove", self.controlPanel_contentFrame)
+        self.button_remove = QPushButton("Remove",
+                                         self.controlPanel_contentFrame)
         self.button_remove.setFixedSize(70, 25)
         self.button_remove.setEnabled(False)
         
-        self.button_editContent = QPushButton("Edit", self.controlPanel_contentFrame)
+        self.button_editContent = QPushButton("Edit",
+                                              self.controlPanel_contentFrame)
         self.button_editContent.setFixedSize(70, 25)
         self.button_editContent.setEnabled(False)
         
@@ -322,7 +339,8 @@ class MainWindow(QMainWindow):
         # Input and info section Frame
         self.inputAndInfo_contentFrame = QFrame(self.edit_contentFrame)
         self.inputAndInfo_contentFrame.setFixedSize(300, 520)
-        self.inputAndInfo_contentFrame.setStyleSheet("QFrame {background-color: orange; }")
+        self.inputAndInfo_contentFrame.setStyleSheet("QFrame \
+                                        {background-color: orange;}")
         
         # # Input and info section Layout
         inputAndInfo_contentLayout = self.gridTemplate(self.inputAndInfo_contentFrame)
@@ -382,8 +400,10 @@ class MainWindow(QMainWindow):
         pointsRegEx = QRegularExpressionValidator(rx)
         self.input_beerPoints.setValidator(pointsRegEx)
         
-        self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 5, Qt.AlignmentFlag.AlignHCenter)
-        self.addForm_layout.addWidget(self.button_addImage, 1, 0, 1, 5, Qt.AlignmentFlag.AlignHCenter)
+        self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 5,
+                                      Qt.AlignmentFlag.AlignHCenter)
+        self.addForm_layout.addWidget(self.button_addImage, 1, 0, 1, 5,
+                                      Qt.AlignmentFlag.AlignHCenter)
         self.addForm_layout.addWidget(self.label_beerName, 2, 0)
         self.addForm_layout.addWidget(self.input_beerName, 2, 1, 1, 4)
         self.addForm_layout.addWidget(self.label_beerAlco, 3, 0)
@@ -395,7 +415,8 @@ class MainWindow(QMainWindow):
         self.addForm_layout.addWidget(self.input_beerIngr, 4, 1, 1, 4)
         self.addForm_layout.addWidget(self.label_beerTaste, 5, 0)
         self.addForm_layout.addWidget(self.input_beerTaste, 5, 1, 1, 4)
-        self.addForm_layout.addWidget(self.button_confirmForm, 6, 0, 1, 5, Qt.AlignmentFlag.AlignHCenter)
+        self.addForm_layout.addWidget(self.button_confirmForm, 6, 0, 1, 5,
+                                      Qt.AlignmentFlag.AlignHCenter)
         
         inputAndInfo_contentLayout.addWidget(self.addForm, 0, 0)
         
@@ -422,7 +443,9 @@ class MainWindow(QMainWindow):
 
         self.table.setRowCount(1)
         self.table.setColumnCount(5)
-        self.table.setHorizontalHeaderLabels(["Name", "Alc %", "Rating","Ingridients", "Description"])
+        self.table.setHorizontalHeaderLabels(["Name", "Alc %", "Rating",
+                                              "Ingridients", "Description"])
+        # self.table.setModel()
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
         self.table.setSortingEnabled(True)
         self.table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
@@ -444,7 +467,8 @@ class MainWindow(QMainWindow):
         self.button_remove.clicked.connect(self.removeItem)
         self.button_editContent.clicked.connect(self.editItem)
         self.button_addImage.clicked.connect(partial(self.setImage, "button"))
-        self.button_confirmForm.clicked.connect(partial(self.addItemToTable, "new"))
+        self.button_confirmForm.clicked.connect(partial(self.addItemToTable,
+                                                        "new"))
         
         self.table.itemClicked.connect(self.getDataFromTable)
 
