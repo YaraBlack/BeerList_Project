@@ -32,15 +32,16 @@ def saveSingleFile(parentWidget) -> str:
     return str(path)
 
 # Write to file
-def jsonWrite(path: str, myDict: dict) -> None:
+def jsonWrite(path: str, myDict: dict, mode: str) -> None:
     try:
-        fileW = open(path, "w", encoding = "utf-8")
+        fileW = open(path, mode, encoding = "utf-8")
         json.dump(myDict, fileW, ensure_ascii = False, indent = 4)
     except FileNotFoundError as error:
         print("Error!", error)
     else:
         fileW.close()
         print("The file has been written successfully!\n")
+        
 
 # Read from file
 def jsonRead(path: str, myDict: dict) -> None:
