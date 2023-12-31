@@ -4,8 +4,8 @@ from functools import partial
 from PyQt6.QtCore import Qt, QRegularExpression
 from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton,\
     QGridLayout, QWidget, QFrame, QLineEdit, QDialog, QPlainTextEdit,\
-    QTableWidget, QTableWidgetItem, QHeaderView
-from PyQt6.QtGui import QPixmap, QRegularExpressionValidator
+    QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox
+from PyQt6.QtGui import QPixmap, QRegularExpressionValidator,QIcon
 from filesHandler import *
 
 
@@ -19,12 +19,26 @@ class RegistrationForm(QDialog):
         self.setFixedSize(300, 300)
 
 
+class MessageBox(QMessageBox):
+    def __init__(self):
+        super(MessageBox,self).__init__()
+        
+        self.setWindowTitle("Attention!")
+        self.setIcon(QMessageBox.Icon.Warning)
+        self.setWindowIcon(QIcon("resources/icons/icon2.png"))
+        
+        self.setText("The 'name' input field is empty!")
+        
+        self.exec()
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
         
         self.setWindowTitle("BeerList")
         self.setFixedSize(800, 600)
+        self.setWindowIcon(QIcon("resources/icons/icon2.png"))
+        
         
         self.tempDict = {}
         self.imagePath = ""
@@ -113,31 +127,36 @@ class MainWindow(QMainWindow):
         
     def addItemToTable(self, state: str):
         
-        if state == "new":
-            self.tempDict[self.input_beerName.text()] = {
-                'alco': self.input_beerAlco.text(),
-                'grade': self.input_beerPoints.text(),
-                'ingr': self.input_beerIngr.toPlainText(),
-                'descr': self.input_beerTaste.toPlainText(),
-                'imgPath': self.imagePath}
-        elif state == "edit":
-            editedItem = {}
         
-            editedItem[self.input_beerName.text()] = {
-                'alco': self.input_beerAlco.text(),
-                'grade': self.input_beerPoints.text(),
-                'ingr': self.input_beerIngr.toPlainText(),
-                'descr': self.input_beerTaste.toPlainText(),
-                'imgPath': self.imagePath}
+        if not self.input_beerName.text():
+            self.messageBox = MessageBox()
+        else:
         
-            self.tempDict = dict(list(self.tempDict.items())[:self.activeRow] +
-                                list(editedItem.items()) +
-                                list(self.tempDict.items())[self.activeRow + 1:])
+            if state == "new":
+                self.tempDict[self.input_beerName.text()] = {
+                    'alco': self.input_beerAlco.text(),
+                    'grade': self.input_beerPoints.text(),
+                    'ingr': self.input_beerIngr.toPlainText(),
+                    'descr': self.input_beerTaste.toPlainText(),
+                    'imgPath': self.imagePath}
+            elif state == "edit":
+                editedItem = {}
             
-            print("Edited successfully!")
-        
-        self.clearEdit()
-        self.setTable()
+                editedItem[self.input_beerName.text()] = {
+                    'alco': self.input_beerAlco.text(),
+                    'grade': self.input_beerPoints.text(),
+                    'ingr': self.input_beerIngr.toPlainText(),
+                    'descr': self.input_beerTaste.toPlainText(),
+                    'imgPath': self.imagePath}
+            
+                self.tempDict = dict(list(self.tempDict.items())[:self.activeRow] +
+                                    list(editedItem.items()) +
+                                    list(self.tempDict.items())[self.activeRow + 1:])
+                
+                print("Edited successfully!")
+            
+            self.clearEdit()
+            self.setTable()
         
     def addNew(self):
         self.clearEdit()
@@ -406,7 +425,6 @@ class MainWindow(QMainWindow):
         self.table.setHorizontalHeaderLabels(["Name", "Alc %", "Rating","Ingridients", "Description"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
         self.table.setSortingEnabled(True)
-        self.table.setModel()
         self.table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.table.setCornerButtonEnabled(False)
         self.table.setColumnWidth(0, 120)
