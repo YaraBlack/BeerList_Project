@@ -4,7 +4,7 @@ from functools import partial
 from PyQt6.QtCore import Qt, QRegularExpression
 from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton,\
     QGridLayout, QWidget, QFrame, QLineEdit, QDialog, QPlainTextEdit,\
-    QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox
+    QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox, QVBoxLayout
 from PyQt6.QtGui import QPixmap, QRegularExpressionValidator, QIcon
 from filesHandler import *
 
@@ -17,6 +17,38 @@ class RegistrationForm(QDialog):
         
         self.setWindowTitle("Registration")
         self.setFixedSize(300, 300)
+        self.setWindowModality(Qt.WindowModality.ApplicationModal)
+        
+        
+        
+        self.reg_layout = QVBoxLayout()
+        self.setLayout(self.reg_layout)
+        
+        self.label_userName = QLabel("Username:")
+        self.label_password = QLabel("Password:")
+        
+        self.input_regLogin = QLineEdit()
+        self.input_regPass = QLineEdit()
+        self.input_regPass.setEchoMode(QLineEdit.EchoMode.Password)
+        self.input_regPass.setMaxLength(20)
+        self.input_regPass.setFixedSize(150, 25)
+        
+        self.button_register = QPushButton("Submit")
+        self.button_register.setFixedSize(50, 25)
+        
+        self.reg_layout.addWidget(self.label_userName)
+        self.reg_layout.addWidget(self.input_regLogin)
+        self.reg_layout.addWidget(self.label_password)
+        self.reg_layout.addWidget(self.input_regPass)
+        self.reg_layout.addWidget(self.button_register)
+        
+        self.button_register.clicked.connect(self.regSubmit)
+    
+    def regSubmit(self):
+        if self.input_regLogin.text() and self.input_regPass.text():
+            self.close()
+        
+
 
 
 class MessageBox(QMessageBox):
@@ -25,10 +57,16 @@ class MessageBox(QMessageBox):
         
         self.setWindowTitle("Attention!")
         self.setIcon(QMessageBox.Icon.Warning)
-        self.setWindowIcon(QIcon("resources/icons/icon2.png"))
-        
-        self.setText("The 'name' input field is empty!")
-        
+        self.setWindowIcon(QIcon("resources/icons/icon2.png"))   
+    
+    def invokeMsgBox(self, msgType: int):
+        match msgType:
+            case 1:
+                self.setText("The name is empty!")
+            case 2:
+                self.setText("The alcohol percentage is entered incorrectly!")
+            case 3:
+                self.setText("The points are entered incorrectly!")
         self.exec()
 
 class NumericTableWidgetItem(QTableWidgetItem):
@@ -91,7 +129,7 @@ class MainWindow(QMainWindow):
     def saveFile(self):
         path = saveSingleFile(self)
         if path:
-            jsonWrite(path, self.tempDict)
+            jsonWrite(path, self.tempDict, "w")
         else:
             print("Operation has been canceled!")
     
@@ -134,14 +172,30 @@ class MainWindow(QMainWindow):
                                         Qt.AlignmentFlag.AlignHCenter)
         else:
             print("Operation has been canceled!")
+    
+    def checkFloatInput(self):
+        alcCheck = self.input_beerAlco.text().split(".")
+        pointsCheck = self.input_beerPoints.text().split(".")
+        errCounter = 0
+        if not self.input_beerName.text():
+            self.messageBox.invokeMsgBox(1)
+            errCounter += 1
+        elif len(alcCheck) > 1:
+            if not alcCheck[1]:
+                self.messageBox.invokeMsgBox(2)
+                errCounter += 1
+        elif len(pointsCheck) > 1:
+            if not pointsCheck[1]:
+                self.messageBox.invokeMsgBox(3)
+                errCounter += 1
+        
+        if errCounter:
+            return False
+        else:
+            return True
         
     def addItemToTable(self, state: str):
-        
-        
-        if not self.input_beerName.text():
-            self.messageBox = MessageBox()
-        else:
-        
+        if self.checkFloatInput():
             if state == "new":
                 self.tempDict[self.input_beerName.text()] = {
                     'alco': self.input_beerAlco.text(),
@@ -167,6 +221,8 @@ class MainWindow(QMainWindow):
             
             self.clearEdit()
             self.setTable()
+        else:
+            print("MessageBox has been invoked!")
         
     def addNew(self):
         self.clearEdit()
@@ -198,29 +254,26 @@ class MainWindow(QMainWindow):
 
     def getDataFromTable(self, item: QTableWidgetItem):
         self.activeRow = item.row()
-        if(item.data(0) in self.tempDict):
-            
-            for key, value in self.tempDict.items():
-                if 'imgPath' not in value:
-                    self.tempDict[key]['imgPath'] = ""
-            
-            print(f"{item.data(0)} has values {self.tempDict[item.data(0)]}")
-            self.input_beerName.setText(f"{item.data(0)}")
-            self.input_beerAlco.setText(f"{self.tempDict[item.data(0)]['alco']}")
-            self.input_beerPoints.setText(f"{self.tempDict[item.data(0)]['grade']}")
-            self.input_beerIngr.setPlainText(f"{self.tempDict[item.data(0)]['ingr']}")
-            self.input_beerTaste.setPlainText(f"{self.tempDict[item.data(0)]['descr']}")
-            if self.tempDict[item.data(0)]['imgPath']:
-                self.setImage("func", self.tempDict[item.data(0)]['imgPath'])                
+        if item.column() == 0:
+            if(item.data(0) in self.tempDict):
+                
+                print(f"{item.data(0)} has values {self.tempDict[item.data(0)]}")
+                self.input_beerName.setText(f"{item.data(0)}")
+                self.input_beerAlco.setText(f"{self.tempDict[item.data(0)]['alco']}")
+                self.input_beerPoints.setText(f"{self.tempDict[item.data(0)]['grade']}")
+                self.input_beerIngr.setPlainText(f"{self.tempDict[item.data(0)]['ingr']}")
+                self.input_beerTaste.setPlainText(f"{self.tempDict[item.data(0)]['descr']}")
+                if self.tempDict[item.data(0)]['imgPath']:
+                    self.setImage("func", self.tempDict[item.data(0)]['imgPath'])                
+                else:
+                    self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 5,
+                                                Qt.AlignmentFlag.AlignHCenter)
+                
+                
+                if not self.input_beerName.isReadOnly():
+                    self.changeReadOnly(True)
             else:
-                self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 5,
-                                              Qt.AlignmentFlag.AlignHCenter)
-            
-            
-            if not self.input_beerName.isReadOnly():
-                self.changeReadOnly(True)
-        else:
-            print("Wrong data! Either empty cell or not name cell!")
+                print("Data isn't in dictionary!")
     
     
     def createContent(self):
@@ -234,6 +287,12 @@ class MainWindow(QMainWindow):
         self.main_contentFrame.setLayout(self.main_contentLayout)
         self.main_contentFrame.setStyleSheet('QFrame \
                                 {background-color: #F9D7AF; }')
+
+        # Create message box to call later
+        self.messageBox = MessageBox()
+
+        # Create registration form to call later
+        self.rForm = RegistrationForm()
         
 ###############################################################################
         
@@ -249,9 +308,6 @@ class MainWindow(QMainWindow):
         self.user_contentLayout = self.gridTemplate(self.user_contentFrame)
         self.user_contentFrame.setLayout(self.user_contentLayout)
         self.user_contentLayout.setSpacing(10)
-
-        # Create registration form to call later
-        self.rForm = RegistrationForm()
 
         # Create buttons and inputs and set their size
         self.button_open = QPushButton("Open", self.user_contentFrame)
@@ -276,6 +332,8 @@ class MainWindow(QMainWindow):
         self.input_password = QLineEdit(self.user_contentFrame)
         self.input_password.setFixedSize(150, 25)
         self.input_password.setPlaceholderText('Password')
+        self.input_password.setEchoMode(QLineEdit.EchoMode.Password)
+        self.input_password.setMaxLength(20)
         
         # Add elements to User section Frame's Layout
         self.user_contentLayout.setColumnMinimumWidth(0, 10)
@@ -316,7 +374,6 @@ class MainWindow(QMainWindow):
                                          self.controlPanel_contentFrame)
         self.button_addNew.setFixedSize(70, 25)
         
-        
         self.button_remove = QPushButton("Remove",
                                          self.controlPanel_contentFrame)
         self.button_remove.setFixedSize(70, 25)
@@ -353,11 +410,9 @@ class MainWindow(QMainWindow):
         self.addForm.setStyleSheet(" QLabel {border: 0px}")
         self.addForm_layout.setContentsMargins(10, 10, 10, 10)
         self.addForm_layout.setSpacing(5)
-        
-        
+          
         self.button_addImage = QPushButton("Add image", self.addForm)
         self.button_addImage.setFixedSize(80, 25)
-
         
         self.button_confirmForm = QPushButton("Confirm", self.addForm)
         self.button_confirmForm.setFixedSize(80, 25)
@@ -395,9 +450,15 @@ class MainWindow(QMainWindow):
         self.img_placeholder.setFixedSize(200, 200)
         self.img_placeholder.setStyleSheet("border: 1px solid black")
         
+        # Add validator to alcohol percentage
+        rx_alco = QRegularExpression(r'^\d$|^(?:\d\.\d){0,1}$')
+        alcoRegEx = QRegularExpressionValidator(rx_alco)
+        self.input_beerAlco.setValidator(alcoRegEx)
+        
         # Add validation to points input
-        rx = QRegularExpression(r'^\d{0,3}$')
-        pointsRegEx = QRegularExpressionValidator(rx)
+        # rx = QRegularExpression(r'^\d{0,3}$')
+        rx_points = QRegularExpression(r'^\d$|^(?:\d\.\d){0,1}$')
+        pointsRegEx = QRegularExpressionValidator(rx_points)
         self.input_beerPoints.setValidator(pointsRegEx)
         
         self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 5,
@@ -424,14 +485,8 @@ class MainWindow(QMainWindow):
         
         self.edit_contentLayout.addWidget(self.controlPanel_contentFrame, 0, 0)
         self.edit_contentLayout.addWidget(self.inputAndInfo_contentFrame, 1, 0)
-        
-        
-        
-        
-        
-        
+             
 ###############################################################################
-        
         # List output section
         # List output section Frame
         listOutput_contentFrame = QFrame(self.main_contentFrame)
@@ -471,7 +526,6 @@ class MainWindow(QMainWindow):
                                                         "new"))
         
         self.table.itemClicked.connect(self.getDataFromTable)
-
         
         # Add layouts to Main Frame
         self.main_contentLayout.addWidget(self.user_contentFrame, 0, 0)
