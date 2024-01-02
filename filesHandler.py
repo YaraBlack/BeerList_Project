@@ -19,7 +19,6 @@ def openSingleFile(parentWidget, fileType: str) -> str:
     return str(path)
 
 # Return a path to save a file
-
 def saveSingleFile(parentWidget) -> str:
     file_filter = "JSON file (*.json)"
     path, _ = QFileDialog.getSaveFileName(
