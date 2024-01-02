@@ -10,6 +10,53 @@ from filesHandler import *
 
 
 
+class OKMessageBox(QMessageBox):
+    def __init__(self):
+        super(OKMessageBox, self).__init__()
+            
+        self.setWindowTitle("Success!")
+        self.setWindowIcon(QIcon("resources/icons/icon2.png"))
+        
+    def invokeMsgBox(self, msgType: int):
+        match msgType:
+            case 1:
+                self.setText("Registation completed!")
+            case 2:
+                self.setText("Logged in successfully!")
+                
+        self.exec()
+
+class AttentionMessageBox(QMessageBox):
+    def __init__(self):
+        super(AttentionMessageBox,self).__init__()
+        
+        self.setWindowTitle("Attention!")
+        self.setIcon(QMessageBox.Icon.Warning)
+        self.setWindowIcon(QIcon("resources/icons/icon2.png"))   
+    
+    def invokeMsgBox(self, msgType: int):
+        match msgType:
+            case 1:
+                self.setText("One of the fields is empty!")
+            case 2:
+                self.setText("The alcohol percentage is entered incorrectly!")
+            case 3:
+                self.setText("The points are entered incorrectly!")
+            case 4:
+                self.setText("User with such username already exists!")
+            case 5:
+                self.setText("Error! There's problem with a request!")
+            case 6:
+                self.setText("Invalid username or password!")
+            case 7:
+                self.setText("Error! Wrong JSON values!")
+            case 8:
+                self.setText("Error! Wrong JSON structure!")
+            case 9:
+                self.setText("That beer is already in the list!\n\
+You can use 'Edit' button to edit the beer in the list.")
+                
+        self.exec()
 
 class RegistrationForm(QDialog):
     def __init__(self):
@@ -78,51 +125,6 @@ class RegistrationForm(QDialog):
             self.AttMessageBox.invokeMsgBox(1)
         
 
-class OKMessageBox(QMessageBox):
-    def __init__(self):
-        super(OKMessageBox, self).__init__()
-            
-        self.setWindowTitle("Success!")
-        self.setWindowIcon(QIcon("resources/icons/icon2.png"))
-        
-    def invokeMsgBox(self, msgType: int):
-        match msgType:
-            case 1:
-                self.setText("Registation completed!")
-            case 2:
-                self.setText("Logged in successfully!")
-                
-        self.exec()
-
-class AttentionMessageBox(QMessageBox):
-    def __init__(self):
-        super(AttentionMessageBox,self).__init__()
-        
-        self.setWindowTitle("Attention!")
-        self.setIcon(QMessageBox.Icon.Warning)
-        self.setWindowIcon(QIcon("resources/icons/icon2.png"))   
-    
-    def invokeMsgBox(self, msgType: int):
-        match msgType:
-            case 1:
-                self.setText("One of the fields is empty!")
-            case 2:
-                self.setText("The alcohol percentage is entered incorrectly!")
-            case 3:
-                self.setText("The points are entered incorrectly!")
-            case 4:
-                self.setText("User with such username already exists!")
-            case 5:
-                self.setText("Error! There's problem with a request!")
-            case 6:
-                self.setText("Invalid username or password!")
-            case 7:
-                self.setText("Error! Wrong JSON values!")
-            case 8:
-                self.setText("Error! Wrong JSON structure!")
-                
-        self.exec()
-
 class NumericTableWidgetItem(QTableWidgetItem):
     def __lt__(self, other):
         try:
@@ -152,20 +154,27 @@ class MainWindow(QMainWindow):
         layout.setSpacing(0)
         return layout
         
-    def setTable(self, setDict: dict):
-        self.table.setRowCount(len(setDict))
-        
-        for i, (name, nameAttr) in enumerate(setDict.items()):
-            item_name = QTableWidgetItem(name)
-            item_alco = NumericTableWidgetItem(nameAttr['alco'])
-            item_grade = NumericTableWidgetItem(nameAttr['grade'])
-            item_ingr = QTableWidgetItem(nameAttr['ingr'])
-            item_descr = QTableWidgetItem(nameAttr['descr'])
-            self.table.setItem(i, 0, item_name)
-            self.table.setItem(i, 1, item_alco)
-            self.table.setItem(i, 2, item_grade)
-            self.table.setItem(i, 3, item_ingr)
-            self.table.setItem(i, 4, item_descr)
+    def setTable(self, setDict: dict, mode="std"):
+        if mode == "std":
+            self.table.setRowCount(len(setDict))
+                
+            for i, (name, nameAttr) in enumerate(setDict.items()):
+                item_name = QTableWidgetItem(name)
+                item_alco = NumericTableWidgetItem(nameAttr['alco'])
+                item_grade = NumericTableWidgetItem(nameAttr['grade'])
+                item_ingr = QTableWidgetItem(nameAttr['ingr'])
+                item_descr = QTableWidgetItem(nameAttr['descr'])
+                self.table.setItem(i, 0, item_name)
+                self.table.setItem(i, 1, item_alco)
+                self.table.setItem(i, 2, item_grade)
+                self.table.setItem(i, 3, item_ingr)
+                self.table.setItem(i, 4, item_descr)
+        elif mode == "logout":
+            self.table.setRowCount(1)
+            for column in range(5):
+                item = QTableWidgetItem("")
+                self.table.setItem(0, column, item)
+            
     
     def openDB(self):
         path = openSingleFile(self, "db")
@@ -207,11 +216,14 @@ class MainWindow(QMainWindow):
             self.button_addNew.setEnabled(not val)
             self.button_addImage.setEnabled(not val)
             self.button_confirmForm.setEnabled(not val)
+            self.button_remove.setEnabled(not val)
+            self.button_editContent.setEnabled(not val)
             self.input_beerName.setReadOnly(val)
             self.input_beerAlco.setReadOnly(val)
             self.input_beerPoints.setReadOnly(val)
             self.input_beerIngr.setReadOnly(val)
             self.input_beerTaste.setReadOnly(val)
+            self.table.setEnabled(not val)
         elif state == "loggedIn":
             self.button_open.setEnabled(val)
             self.button_save.setEnabled(val)
@@ -223,6 +235,7 @@ class MainWindow(QMainWindow):
             self.input_beerPoints.setReadOnly(not val)
             self.input_beerIngr.setReadOnly(not val)
             self.input_beerTaste.setReadOnly(not val)
+            self.table.setEnabled(val)
 
 
         else:
@@ -282,12 +295,19 @@ class MainWindow(QMainWindow):
     def addItemToTable(self, state: str):
         if self.checkFloatInput():
             if state == "new":
-                self.tempDict[self.input_beerName.text()] = {
-                    'alco': self.input_beerAlco.text(),
-                    'grade': self.input_beerPoints.text(),
-                    'ingr': self.input_beerIngr.toPlainText(),
-                    'descr': self.input_beerTaste.toPlainText(),
-                    'imgPath': self.imagePath}
+                if self.input_beerName.text() not in self.tempDict:
+                    self.tempDict[self.input_beerName.text()] = {
+                        'alco': self.input_beerAlco.text(),
+                        'grade': self.input_beerPoints.text(),
+                        'ingr': self.input_beerIngr.toPlainText(),
+                        'descr': self.input_beerTaste.toPlainText(),
+                        'imgPath': self.imagePath}
+                    
+                    print("Added successfully!")
+                    self.clearEdit()
+                    self.setTable(self.tempDict)
+                else:
+                    self.AttMessageBox.invokeMsgBox(9)
             elif state == "edit":
                 editedItem = {}
             
@@ -303,9 +323,8 @@ class MainWindow(QMainWindow):
                                     list(self.tempDict.items())[self.activeRow + 1:])
                 
                 print("Edited successfully!")
-            
-            self.clearEdit()
-            self.setTable(self.tempDict)
+                self.clearEdit()
+                self.setTable(self.tempDict)
         else:
             print("AttentionMessageBox has been invoked!")
         
@@ -362,7 +381,7 @@ class MainWindow(QMainWindow):
     
     def search(self):
         searchBeer = self.input_searchBar.text()
-        if searchBeer in self.tempDict:
+        if searchBeer in self.tempDict.keys():
             searchItem = {searchBeer: self.tempDict[searchBeer]}
             self.setTable(searchItem)
         elif searchBeer == "":
@@ -373,6 +392,9 @@ class MainWindow(QMainWindow):
         self.label_user.setText("")
         self.changeAuthElements(False)
         self.changeState(val=True, state="start")
+        self.clearEdit()
+        self.tempDict = {}
+        self.setTable(self.tempDict, "logout")
     
     def login(self):
         if self.input_username.text() and self.input_password.text():
