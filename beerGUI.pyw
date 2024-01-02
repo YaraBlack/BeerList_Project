@@ -20,8 +20,9 @@ class RegistrationForm(QDialog):
         self.setWindowIcon(QIcon("resources/icons/icon2.png"))
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
         
-        self.messageBox = MessageBox()
-        
+        self.AttMessageBox = AttentionMessageBox()
+        self.OKMessageBox = OKMessageBox()
+                
         self.reg_layout = QVBoxLayout()
         self.setLayout(self.reg_layout)
         
@@ -60,27 +61,42 @@ class RegistrationForm(QDialog):
                 
                 if response.status_code == 200:
                     print("Registration successful!")
+                    self.OKMessageBox.invokeMsgBox(1)
                     self.input_regLogin.setText("")
                     self.input_regPass.setText("")
                     self.close()
                 elif response.status_code == 500:
-                    self.messageBox.invokeMsgBox(4)
+                    self.AttMessageBox.invokeMsgBox(4)
                 else:
                     print("Registration failed.", response.status_code,
                           response.text)
-                    self.messageBox.invokeMsgBox(5)
+                    self.AttMessageBox.invokeMsgBox(5)
             except Exception as e:
                 print("Error:", e)
         
         else:
-            self.messageBox.invokeMsgBox(1)
+            self.AttMessageBox.invokeMsgBox(1)
         
 
-
-
-class MessageBox(QMessageBox):
+class OKMessageBox(QMessageBox):
     def __init__(self):
-        super(MessageBox,self).__init__()
+        super(OKMessageBox, self).__init__()
+            
+        self.setWindowTitle("Success!")
+        self.setWindowIcon(QIcon("resources/icons/icon2.png"))
+        
+    def invokeMsgBox(self, msgType: int):
+        match msgType:
+            case 1:
+                self.setText("Registation completed!")
+            case 2:
+                self.setText("Logged in successfully!")
+                
+        self.exec()
+
+class AttentionMessageBox(QMessageBox):
+    def __init__(self):
+        super(AttentionMessageBox,self).__init__()
         
         self.setWindowTitle("Attention!")
         self.setIcon(QMessageBox.Icon.Warning)
@@ -98,6 +114,13 @@ class MessageBox(QMessageBox):
                 self.setText("User with such username already exists!")
             case 5:
                 self.setText("Error! There's problem with a request!")
+            case 6:
+                self.setText("Invalid username or password!")
+            case 7:
+                self.setText("Error! Wrong JSON values!")
+            case 8:
+                self.setText("Error! Wrong JSON structure!")
+                
         self.exec()
 
 class NumericTableWidgetItem(QTableWidgetItem):
@@ -129,10 +152,10 @@ class MainWindow(QMainWindow):
         layout.setSpacing(0)
         return layout
         
-    def setTable(self):
-        self.table.setRowCount(len(self.tempDict))
+    def setTable(self, setDict: dict):
+        self.table.setRowCount(len(setDict))
         
-        for i, (name, nameAttr) in enumerate(self.tempDict.items()):
+        for i, (name, nameAttr) in enumerate(setDict.items()):
             item_name = QTableWidgetItem(name)
             item_alco = NumericTableWidgetItem(nameAttr['alco'])
             item_grade = NumericTableWidgetItem(nameAttr['grade'])
@@ -149,12 +172,14 @@ class MainWindow(QMainWindow):
         if path:
             try:
                 jsonRead(path, self.tempDict)        
-                self.setTable()
+                self.setTable(self.tempDict)
                 self.addNew()
             except TypeError as e:
-                print("Error! Wrong JSON data type!\n", e)
+                print("Error! Check JSON values!\n", e)
+                self.AttMessageBox.invokeMsgBox(7)
             except KeyError as e:
                 print("Error! Wrong JSON structure!\n", e, "is absent.")
+                self.AttMessageBox.invokeMsgBox(8)
         else:
             print("Operation has been canceled!")
     
@@ -238,15 +263,15 @@ class MainWindow(QMainWindow):
         if not (self.input_beerName.text() and self.input_beerAlco.text() and
             self.input_beerPoints.text() and self.input_beerIngr.toPlainText() and
             self.input_beerTaste.toPlainText()):
-            self.messageBox.invokeMsgBox(1)
+            self.AttMessageBox.invokeMsgBox(1)
             errCounter += 1
         elif len(alcCheck) > 1:
             if not alcCheck[1]:
-                self.messageBox.invokeMsgBox(2)
+                self.AttMessageBox.invokeMsgBox(2)
                 errCounter += 1
         elif len(pointsCheck) > 1:
             if not pointsCheck[1]:
-                self.messageBox.invokeMsgBox(3)
+                self.AttMessageBox.invokeMsgBox(3)
                 errCounter += 1
         
         if errCounter:
@@ -280,9 +305,9 @@ class MainWindow(QMainWindow):
                 print("Edited successfully!")
             
             self.clearEdit()
-            self.setTable()
+            self.setTable(self.tempDict)
         else:
-            print("MessageBox has been invoked!")
+            print("AttentionMessageBox has been invoked!")
         
     def addNew(self):
         self.clearEdit()
@@ -336,11 +361,17 @@ class MainWindow(QMainWindow):
                 print("Data isn't in dictionary!")
     
     def search(self):
-        ...
+        searchBeer = self.input_searchBar.text()
+        if searchBeer in self.tempDict:
+            searchItem = {searchBeer: self.tempDict[searchBeer]}
+            self.setTable(searchItem)
+        elif searchBeer == "":
+            self.setTable(self.tempDict)
+            
     
     def logout(self):
         self.label_user.setText("")
-        self.changeAutElements(False)
+        self.changeAuthElements(False)
         self.changeState(val=True, state="start")
     
     def login(self):
@@ -354,10 +385,16 @@ class MainWindow(QMainWindow):
                 
                 if response.status_code == 200:
                     print("Authentication successful!")
+                    self.OKMessageBox.invokeMsgBox(2)
                     self.changeState(val=True, state="loggedIn")
-                    self.changeAutElements(True)
+                    self.changeAuthElements(True)
                     self.label_user.setText(f"Hello, \
 {self.input_username.text()}!")
+                    self.input_username.setText("")
+                    self.input_password.setText("")
+                elif response.status_code == 401:
+                    print("Invalid username or password!")
+                    self.AttMessageBox.invokeMsgBox(6)
                 else:
                     print("Authentication failed.",response.status_code,
                           response.text)
@@ -365,29 +402,29 @@ class MainWindow(QMainWindow):
                 print("Error:", e)
             
             
-            self.input_username.setText("")
-            self.input_password.setText("")
+
     
-    def changeAutElements(self, isLogged):
+    def changeAuthElements(self, isLogged):
         if isLogged:
             self.input_username.setParent(None)
             self.input_password.setParent(None)
             self.button_logIn.setParent(None)
             self.button_signUp.setParent(None)
-            self.user_contentLayout.addWidget(self.input_searchBar, 0, 4)
-            self.user_contentLayout.addWidget(self.button_search, 0, 5)
-            self.user_contentLayout.addWidget(self.label_user, 0, 6, 
-                                              Qt.AlignmentFlag.AlignRight)
-            self.user_contentLayout.addWidget(self.button_logOut, 0, 7)
+            self.auth_frameLayout.addWidget(self.label_user, 0, 1)
+            self.auth_frameLayout.addWidget(self.button_logOut, 0, 2)
+            self.user_wrapperLayout.addWidget(self.search_frame, 0, 1)
+            self.user_wrapperLayout.addWidget(self.auth_frame, 0, 2)
+            self.user_wrapperLayout.setColumnMinimumWidth(2, 300)
         else:
             self.label_user.setParent(None)
             self.button_logOut.setParent(None)
-            self.input_searchBar.setParent(None)
-            self.button_search.setParent(None)
-            self.user_contentLayout.addWidget(self.input_username, 0, 4)
-            self.user_contentLayout.addWidget(self.input_password, 0, 5)
-            self.user_contentLayout.addWidget(self.button_logIn, 0, 6)
-            self.user_contentLayout.addWidget(self.button_signUp, 0, 7)
+            self.search_frame.setParent(None)
+            self.auth_frameLayout.addWidget(self.input_username, 0, 1)
+            self.auth_frameLayout.addWidget(self.input_password, 0, 2)
+            self.auth_frameLayout.addWidget(self.button_logIn, 0, 3)
+            self.auth_frameLayout.addWidget(self.button_signUp, 0, 4)
+            self.user_wrapperLayout.addWidget(self.auth_frame, 0, 1)
+            self.user_wrapperLayout.setColumnMinimumWidth(2, 0)
     
     def createContent(self):
             
@@ -401,8 +438,9 @@ class MainWindow(QMainWindow):
         self.main_contentFrame.setStyleSheet('QFrame \
                                 {background-color: #F9D7AF; }')
 
-        # Create message box to call later
-        self.messageBox = MessageBox()
+        # Create message boxes to call later
+        self.AttMessageBox = AttentionMessageBox()
+        self.OKMessageBox = OKMessageBox()
 
         # Create registration form to call later
         self.rForm = RegistrationForm()
@@ -426,58 +464,79 @@ class MainWindow(QMainWindow):
             """)
         
         # Create User section Layout
-        self.user_contentLayout = self.gridTemplate(self.user_contentFrame)
-        self.user_contentFrame.setLayout(self.user_contentLayout)
-        self.user_contentLayout.setSpacing(10)
+        self.user_wrapperLayout = self.gridTemplate(self.user_contentFrame)
+        self.user_contentFrame.setLayout(self.user_wrapperLayout)
+        
+        self.files_frame = QFrame(self.user_contentFrame)
+        self.files_frameLayout = self.gridTemplate(self.files_frame)
+        self.files_frameLayout.setSpacing(10)
+        self.files_frame.setStyleSheet("border-right: 1px solid black")
+        
+        self.auth_frame = QFrame(self.user_contentFrame)
+        self.auth_frameLayout = self.gridTemplate(self.auth_frame)
+        self.auth_frame.setLayout(self.auth_frameLayout)
+        
+        self.search_frame = QFrame(self.user_contentFrame)
+        self.search_frameLayout = self.gridTemplate(self.search_frame)
+        self.search_frame.setLayout(self.search_frameLayout)
+        self.search_frame.setStyleSheet("border-right: 1px solid black")
+        self.search_frame.setParent(None)
+        
+        self.user_wrapperLayout.addWidget(self.files_frame, 0, 0)
+        self.user_wrapperLayout.addWidget(self.auth_frame, 0, 1)
+        
 
         # Create buttons and inputs and set their size
-        self.button_open = QPushButton("Open", self.user_contentFrame)
+        self.button_open = QPushButton("Open", self.files_frame)
         self.button_open.setFixedSize(70, 25)
         
         
-        self.button_save = QPushButton("Save", self.user_contentFrame)
+        self.button_save = QPushButton("Save", self.files_frame)
         self.button_save.setFixedSize(70, 25)
         
-        self.button_logIn = QPushButton("Log in", self.user_contentFrame)
+        self.button_logIn = QPushButton("Log in", self.auth_frame)
         self.button_logIn.setFixedSize(100, 25)
         
-        self.button_signUp = QPushButton("Sign Up", self.user_contentFrame)
+        self.button_signUp = QPushButton("Sign Up", self.auth_frame)
         self.button_signUp.setFixedSize(100, 25)
 
-        self.button_logOut = QPushButton("Log Out", None)
+        self.button_logOut = QPushButton("Log Out", self.search_frame)
         self.button_logOut.setFixedSize(100, 25)
         
         self.label_user = QLabel()
-        self.label_user.setFixedSize(100, 25)
+        self.label_user.setFixedSize(180, 25)
         
-        self.input_searchBar = QLineEdit(None)
-        self.input_searchBar.setFixedSize(300, 25)
+        self.input_searchBar = QLineEdit(self.search_frame)
+        self.input_searchBar.setFixedSize(250, 25)
         self.input_searchBar.setPlaceholderText('Search')
         
-        self.button_search = QPushButton("Search", None)
-        self.button_search.setFixedSize(60, 25)
-        
-        self.input_username = QLineEdit(self.user_contentFrame)
+        self.input_username = QLineEdit(self.auth_frame)
         self.input_username.setFixedSize(150, 25)
         self.input_username.setPlaceholderText('Login')
         self.input_username.setMaxLength(20)
         
-        self.input_password = QLineEdit(self.user_contentFrame)
+        self.input_password = QLineEdit(self.auth_frame)
         self.input_password.setFixedSize(150, 25)
         self.input_password.setPlaceholderText('Password')
         self.input_password.setEchoMode(QLineEdit.EchoMode.Password)
         self.input_password.setMaxLength(20)
         
         # Add elements to User section Frame's Layout
-        self.user_contentLayout.setColumnMinimumWidth(0, 10)
-        self.user_contentLayout.addWidget(self.button_open, 0, 1)
-        self.user_contentLayout.addWidget(self.button_save, 0, 2)
-        self.user_contentLayout.setColumnMinimumWidth(3, 50)
-        self.user_contentLayout.addWidget(self.input_username, 0, 4)
-        self.user_contentLayout.addWidget(self.input_password, 0, 5)
-        self.user_contentLayout.addWidget(self.button_logIn, 0, 6)
-        self.user_contentLayout.addWidget(self.button_signUp, 0, 7)
-        self.user_contentLayout.setColumnMinimumWidth(8, 10)
+        self.files_frameLayout.setColumnMinimumWidth(0, 20)
+        self.files_frameLayout.addWidget(self.button_open, 0, 1)
+        self.files_frameLayout.addWidget(self.button_save, 0, 2)
+        self.files_frameLayout.setColumnMinimumWidth(3, 20)
+        
+        self.search_frameLayout.setColumnMinimumWidth(0, 10)
+        self.search_frameLayout.addWidget(self.input_searchBar, 0, 1)
+        self.search_frameLayout.setColumnMinimumWidth(2, 10)
+        
+        self.auth_frameLayout.setColumnMinimumWidth(0, 10)
+        self.auth_frameLayout.addWidget(self.input_username, 0, 1)
+        self.auth_frameLayout.addWidget(self.input_password, 0, 2)
+        self.auth_frameLayout.addWidget(self.button_logIn, 0, 3)
+        self.auth_frameLayout.addWidget(self.button_signUp, 0, 4)
+        self.auth_frameLayout.setColumnMinimumWidth(5, 20)
         
 ###############################################################################
         # Edit section
@@ -653,7 +712,7 @@ class MainWindow(QMainWindow):
         self.button_logIn.clicked.connect(self.login)
         self.button_signUp.clicked.connect(self.rForm.show)
         self.button_logOut.clicked.connect(self.logout)
-        self.button_search.clicked.connect(self.search)
+        self.input_searchBar.textEdited.connect(self.search)
         self.button_addNew.clicked.connect(self.addNew)
         self.button_remove.clicked.connect(self.removeItem)
         self.button_editContent.clicked.connect(self.editItem)
