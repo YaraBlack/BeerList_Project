@@ -361,7 +361,6 @@ class MainWindow(QMainWindow):
         if item.column() == 0:
             if(item.data(0) in self.tempDict):
                 
-                print(f"{item.data(0)} has values {self.tempDict[item.data(0)]}")
                 self.input_beerName.setText(f"{item.data(0)}")
                 self.input_beerAlco.setText(f"{self.tempDict[item.data(0)]['alco']}")
                 self.input_beerPoints.setText(f"{self.tempDict[item.data(0)]['grade']}")
