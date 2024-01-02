@@ -1,5 +1,5 @@
 import sys
-import os
+import requests
 from functools import partial
 from PyQt6.QtCore import Qt, QRegularExpression
 from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton,\
@@ -16,10 +16,11 @@ class RegistrationForm(QDialog):
         super(RegistrationForm, self).__init__()
         
         self.setWindowTitle("Registration")
-        self.setFixedSize(300, 300)
+        self.setFixedSize(170, 200)
+        self.setWindowIcon(QIcon("resources/icons/icon2.png"))
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
         
-        
+        self.messageBox = MessageBox()
         
         self.reg_layout = QVBoxLayout()
         self.setLayout(self.reg_layout)
@@ -28,6 +29,9 @@ class RegistrationForm(QDialog):
         self.label_password = QLabel("Password:")
         
         self.input_regLogin = QLineEdit()
+        self.input_regLogin.setFixedSize(150, 25)
+        self.input_regLogin.setMaxLength(20)
+        
         self.input_regPass = QLineEdit()
         self.input_regPass.setEchoMode(QLineEdit.EchoMode.Password)
         self.input_regPass.setMaxLength(20)
@@ -40,13 +44,36 @@ class RegistrationForm(QDialog):
         self.reg_layout.addWidget(self.input_regLogin)
         self.reg_layout.addWidget(self.label_password)
         self.reg_layout.addWidget(self.input_regPass)
-        self.reg_layout.addWidget(self.button_register)
+        self.reg_layout.addWidget(self.button_register, 1,
+                                  Qt.AlignmentFlag.AlignHCenter)
         
         self.button_register.clicked.connect(self.regSubmit)
     
     def regSubmit(self):
         if self.input_regLogin.text() and self.input_regPass.text():
-            self.close()
+            registration_endpoint = "http://localhost:5001/register"
+            
+            data = {"username": self.input_regLogin.text(),
+                    "password": self.input_regPass.text()}
+            try:
+                response = requests.post(registration_endpoint, json=data)
+                
+                if response.status_code == 200:
+                    print("Registration successful!")
+                    self.input_regLogin.setText("")
+                    self.input_regPass.setText("")
+                    self.close()
+                elif response.status_code == 500:
+                    self.messageBox.invokeMsgBox(4)
+                else:
+                    print("Registration failed.", response.status_code,
+                          response.text)
+                    self.messageBox.invokeMsgBox(5)
+            except Exception as e:
+                print("Error:", e)
+        
+        else:
+            self.messageBox.invokeMsgBox(1)
         
 
 
@@ -62,11 +89,15 @@ class MessageBox(QMessageBox):
     def invokeMsgBox(self, msgType: int):
         match msgType:
             case 1:
-                self.setText("The name is empty!")
+                self.setText("One of the fields is empty!")
             case 2:
                 self.setText("The alcohol percentage is entered incorrectly!")
             case 3:
                 self.setText("The points are entered incorrectly!")
+            case 4:
+                self.setText("User with such username already exists!")
+            case 5:
+                self.setText("Error! There's problem with a request!")
         self.exec()
 
 class NumericTableWidgetItem(QTableWidgetItem):
@@ -89,6 +120,7 @@ class MainWindow(QMainWindow):
         self.imagePath = ""
         self.activeRow = 0
         self.createContent()
+        self.changeState(val=True, state="start")
         self.show()
         
     def gridTemplate(self, parent):
@@ -143,16 +175,42 @@ class MainWindow(QMainWindow):
         self.addForm_layout.addWidget(self.img_placeholder, 0 ,0, 1, 5,
                                       Qt.AlignmentFlag.AlignHCenter)
     
-    def changeReadOnly(self, val: bool, editBtnPressed = False):
-        self.input_beerName.setReadOnly(val)
-        self.input_beerAlco.setReadOnly(val)
-        self.input_beerPoints.setReadOnly(val)
-        self.input_beerIngr.setReadOnly(val)
-        self.input_beerTaste.setReadOnly(val)
-        self.button_addImage.setEnabled(not val)
-        if not editBtnPressed:
-            self.button_remove.setEnabled(val)
-            self.button_editContent.setEnabled(val)
+    def changeState(self, val: bool, editBtnPressed=False, state: str="std"):
+        if state == "start":
+            self.button_open.setEnabled(not val)
+            self.button_save.setEnabled(not val)
+            self.button_addNew.setEnabled(not val)
+            self.button_addImage.setEnabled(not val)
+            self.button_confirmForm.setEnabled(not val)
+            self.input_beerName.setReadOnly(val)
+            self.input_beerAlco.setReadOnly(val)
+            self.input_beerPoints.setReadOnly(val)
+            self.input_beerIngr.setReadOnly(val)
+            self.input_beerTaste.setReadOnly(val)
+        elif state == "loggedIn":
+            self.button_open.setEnabled(val)
+            self.button_save.setEnabled(val)
+            self.button_addNew.setEnabled(val)
+            self.button_addImage.setEnabled(val)
+            self.button_confirmForm.setEnabled(val)
+            self.input_beerName.setReadOnly(not val)
+            self.input_beerAlco.setReadOnly(not val)
+            self.input_beerPoints.setReadOnly(not val)
+            self.input_beerIngr.setReadOnly(not val)
+            self.input_beerTaste.setReadOnly(not val)
+
+
+        else:
+            self.input_beerName.setReadOnly(val)
+            self.input_beerAlco.setReadOnly(val)
+            self.input_beerPoints.setReadOnly(val)
+            self.input_beerIngr.setReadOnly(val)
+            self.input_beerTaste.setReadOnly(val)
+            self.button_addImage.setEnabled(not val)
+            self.button_confirmForm.setEnabled(not val)
+            if not editBtnPressed:
+                self.button_remove.setEnabled(val)
+                self.button_editContent.setEnabled(val)
             
     
     def setImage(self, source, sourcePath = ""):
@@ -177,7 +235,9 @@ class MainWindow(QMainWindow):
         alcCheck = self.input_beerAlco.text().split(".")
         pointsCheck = self.input_beerPoints.text().split(".")
         errCounter = 0
-        if not self.input_beerName.text():
+        if not (self.input_beerName.text() and self.input_beerAlco.text() and
+            self.input_beerPoints.text() and self.input_beerIngr.toPlainText() and
+            self.input_beerTaste.toPlainText()):
             self.messageBox.invokeMsgBox(1)
             errCounter += 1
         elif len(alcCheck) > 1:
@@ -226,7 +286,7 @@ class MainWindow(QMainWindow):
         
     def addNew(self):
         self.clearEdit()
-        self.changeReadOnly(False)
+        self.changeState(False)
         self.button_confirmForm.clicked.disconnect()
         self.button_confirmForm.clicked.connect(partial(self.addItemToTable,
                                                         "new"))
@@ -245,7 +305,7 @@ class MainWindow(QMainWindow):
 
     
     def editItem(self):
-        self.changeReadOnly(False, True)
+        self.changeState(False, True)
         
         self.button_confirmForm.clicked.disconnect()
         self.button_confirmForm.clicked.connect(partial(self.addItemToTable,
@@ -271,10 +331,63 @@ class MainWindow(QMainWindow):
                 
                 
                 if not self.input_beerName.isReadOnly():
-                    self.changeReadOnly(True)
+                    self.changeState(True)
             else:
                 print("Data isn't in dictionary!")
     
+    def search(self):
+        ...
+    
+    def logout(self):
+        self.label_user.setText("")
+        self.changeAutElements(False)
+        self.changeState(val=True, state="start")
+    
+    def login(self):
+        if self.input_username.text() and self.input_password.text():
+            auth_endpoint = "http://localhost:5001/login"
+            
+            data = {"username": self.input_username.text(),
+                    "password": self.input_password.text()}
+            try:
+                response = requests.post(auth_endpoint, json=data)
+                
+                if response.status_code == 200:
+                    print("Authentication successful!")
+                    self.changeState(val=True, state="loggedIn")
+                    self.changeAutElements(True)
+                    self.label_user.setText(f"Hello, \
+{self.input_username.text()}!")
+                else:
+                    print("Authentication failed.",response.status_code,
+                          response.text)
+            except Exception as e:
+                print("Error:", e)
+            
+            
+            self.input_username.setText("")
+            self.input_password.setText("")
+    
+    def changeAutElements(self, isLogged):
+        if isLogged:
+            self.input_username.setParent(None)
+            self.input_password.setParent(None)
+            self.button_logIn.setParent(None)
+            self.button_signUp.setParent(None)
+            self.user_contentLayout.addWidget(self.input_searchBar, 0, 4)
+            self.user_contentLayout.addWidget(self.button_search, 0, 5)
+            self.user_contentLayout.addWidget(self.label_user, 0, 6, 
+                                              Qt.AlignmentFlag.AlignRight)
+            self.user_contentLayout.addWidget(self.button_logOut, 0, 7)
+        else:
+            self.label_user.setParent(None)
+            self.button_logOut.setParent(None)
+            self.input_searchBar.setParent(None)
+            self.button_search.setParent(None)
+            self.user_contentLayout.addWidget(self.input_username, 0, 4)
+            self.user_contentLayout.addWidget(self.input_password, 0, 5)
+            self.user_contentLayout.addWidget(self.button_logIn, 0, 6)
+            self.user_contentLayout.addWidget(self.button_signUp, 0, 7)
     
     def createContent(self):
             
@@ -301,8 +414,16 @@ class MainWindow(QMainWindow):
         self.user_contentFrame = QFrame(self.main_contentFrame)
         self.user_contentFrame.setFixedSize(800, 40)
         
-        self.user_contentFrame.setStyleSheet('QFrame \
-            { border-bottom: 1px solid black; background-color: #DCAE77;}')
+        self.user_contentFrame.setStyleSheet("""
+            QFrame {
+                border-bottom: 1px solid black;
+                background-color: #DCAE77;
+                }
+            
+            QLabel {
+                border: 0px
+                }
+            """)
         
         # Create User section Layout
         self.user_contentLayout = self.gridTemplate(self.user_contentFrame)
@@ -323,11 +444,23 @@ class MainWindow(QMainWindow):
         self.button_signUp = QPushButton("Sign Up", self.user_contentFrame)
         self.button_signUp.setFixedSize(100, 25)
 
-        self.button_signUp.clicked.connect(self.rForm.show)
+        self.button_logOut = QPushButton("Log Out", None)
+        self.button_logOut.setFixedSize(100, 25)
+        
+        self.label_user = QLabel()
+        self.label_user.setFixedSize(100, 25)
+        
+        self.input_searchBar = QLineEdit(None)
+        self.input_searchBar.setFixedSize(300, 25)
+        self.input_searchBar.setPlaceholderText('Search')
+        
+        self.button_search = QPushButton("Search", None)
+        self.button_search.setFixedSize(60, 25)
         
         self.input_username = QLineEdit(self.user_contentFrame)
         self.input_username.setFixedSize(150, 25)
         self.input_username.setPlaceholderText('Login')
+        self.input_username.setMaxLength(20)
         
         self.input_password = QLineEdit(self.user_contentFrame)
         self.input_password.setFixedSize(150, 25)
@@ -344,7 +477,7 @@ class MainWindow(QMainWindow):
         self.user_contentLayout.addWidget(self.input_password, 0, 5)
         self.user_contentLayout.addWidget(self.button_logIn, 0, 6)
         self.user_contentLayout.addWidget(self.button_signUp, 0, 7)
-        self.user_contentLayout.setColumnMinimumWidth(12, 10)
+        self.user_contentLayout.setColumnMinimumWidth(8, 10)
         
 ###############################################################################
         # Edit section
@@ -456,7 +589,6 @@ class MainWindow(QMainWindow):
         self.input_beerAlco.setValidator(alcoRegEx)
         
         # Add validation to points input
-        # rx = QRegularExpression(r'^\d{0,3}$')
         rx_points = QRegularExpression(r'^\d$|^(?:\d\.\d){0,1}$')
         pointsRegEx = QRegularExpressionValidator(rx_points)
         self.input_beerPoints.setValidator(pointsRegEx)
@@ -518,6 +650,10 @@ class MainWindow(QMainWindow):
         # Connect all Signals to Slots
         self.button_open.clicked.connect(self.openDB)
         self.button_save.clicked.connect(self.saveFile)
+        self.button_logIn.clicked.connect(self.login)
+        self.button_signUp.clicked.connect(self.rForm.show)
+        self.button_logOut.clicked.connect(self.logout)
+        self.button_search.clicked.connect(self.search)
         self.button_addNew.clicked.connect(self.addNew)
         self.button_remove.clicked.connect(self.removeItem)
         self.button_editContent.clicked.connect(self.editItem)
