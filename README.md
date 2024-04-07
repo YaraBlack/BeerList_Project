@@ -1,5 +1,6 @@
 # BeerList
 GUI program that shows a list of beers with columns: name, ingridients, % of alchohol, user's derscription and points.
+Beware of the horrible design!
 
 ## For this program to work properly you have to have follow next steps:
 1. Create a file `config.json` with "BD_USER" and "BD_PASSWORD" name-value pairs. Example:
